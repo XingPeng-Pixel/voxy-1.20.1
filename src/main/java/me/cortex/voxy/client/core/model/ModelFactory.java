@@ -535,10 +535,9 @@ public class ModelFactory {
 
             int faceModelData = 0;
             faceModelData |= faceSize[0] | (faceSize[1]<<4) | (faceSize[2]<<8) | (faceSize[3]<<12);
-            //Change the scale from 0->1 (ends inclusive)
-            // this is cursed also warning stuff at 63 (i.e half a pixel from the end will be clamped to the end)
-            int enc = Math.round(offset*64);
-            faceModelData |= Math.min(enc,63)<<16;
+            //Change the scale from 0->1 (ends inclusive) into 6-bit [0..63]
+            int enc = Math.round(offset * 63.0f);
+            faceModelData |= Math.min(enc, 63) << 16;
             //Still have 11 bits free
 
             //Stuff like fences are solid, however they have extra side piece that mean it needs to have discard on

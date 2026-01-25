@@ -4,6 +4,7 @@ layout(binding = 0, std140) uniform SceneUniform {
     mat4 MVP;
     ivec4 section;
     vec4 negInnerSec;
+    ivec4 worldHeight;
 };
 
 layout(binding = 1, std430) restrict readonly buffer ChunkPosBuffer {
@@ -35,9 +36,8 @@ void main() {
     }
 
     ivec3 cubeCornerI = ivec3(gl_VertexID&1, (gl_VertexID>>2)&1, (gl_VertexID>>1)&1)*16;
-    //Expand the y height to be big (will be +- 8192)
-    //TODO: make it W.R.T world height and offsets
-    //cubeCornerI.y = cubeCornerI.y*1024-512;
+    int baseY = origin.y + section.y;
+    cubeCornerI.y = ((gl_VertexID>>2)&1) == 0 ? (worldHeight.x - baseY) : (worldHeight.y - baseY);
     gl_Position = MVP * vec4(vec3(cubeCornerI+origin), 1);
     gl_Position.z -= 0.0005f;
 

@@ -8,6 +8,7 @@ import me.cortex.voxy.client.core.gl.shader.ShaderType;
 import me.cortex.voxy.client.core.rendering.util.DownloadStream;
 import me.cortex.voxy.client.core.rendering.util.PrintfDebugUtil;
 import me.cortex.voxy.client.core.rendering.util.UploadStream;
+import me.cortex.voxy.common.world.WorldEngine;
 import org.lwjgl.opengl.ARBDirectStateAccess;
 import org.lwjgl.system.MemoryUtil;
 
@@ -36,6 +37,7 @@ public class NodeCleaner {
             .define("WORK_SIZE", SORTING_WORKER_SIZE)
             .define("ELEMS_PER_THREAD", WORK_PER_THREAD)
             .define("OUTPUT_SIZE", OUTPUT_COUNT)
+            .define("MAX_LOD_LAYER", WorldEngine.MAX_LOD_LAYER)
             .define("VISIBILITY_BUFFER_BINDING", 1)
             .define("OUTPUT_BUFFER_BINDING", 2)
             .define("NODE_DATA_BINDING", 3)

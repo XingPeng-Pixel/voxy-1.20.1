@@ -116,6 +116,13 @@ public class ChunkBoundRenderer {
             negInnerSec.getToAddress(ptr); ptr += 4*3;
             viewport.MVP.translate(negInnerSec.negate(), new Matrix4f()).getToAddress(matPtr);
             MemoryUtil.memPutFloat(ptr, renderDistance); ptr += 4;
+
+            int minY = Minecraft.getInstance().level.getMinBuildHeight();
+            int maxY = Minecraft.getInstance().level.getMaxBuildHeight();
+            MemoryUtil.memPutInt(ptr, minY); ptr += 4;
+            MemoryUtil.memPutInt(ptr, maxY); ptr += 4;
+            MemoryUtil.memPutInt(ptr, 0); ptr += 4;
+            MemoryUtil.memPutInt(ptr, 0); ptr += 4;
         }
         UploadStream.INSTANCE.commit();
 
