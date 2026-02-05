@@ -407,7 +407,7 @@ public class DHImporter implements IDataImporter {
             hasJDBC = true;
         } catch (ClassNotFoundException | NoClassDefFoundError e) {
             //throw new RuntimeException(e);
-            Logger.warn("Unable to load sqlite JDBC or lzma decompressor, DHImporting wont be available", e);
+            Logger.warn("Unable to load sqlite JDBC or lzma decompressor, DHImporting wont be available: " + e.toString());
         }
         HasRequiredLibraries = hasJDBC;
     }

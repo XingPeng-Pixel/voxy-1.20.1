@@ -95,8 +95,13 @@ public class Serialization {
         Map<Class<?>, GsonConfigSerialization<?>> serializers = new HashMap<>();
 
         Set<String> clazzs = new LinkedHashSet<>();
-        var path = FabricLoader.getInstance().getModContainer("voxy").get().getRootPaths().get(0);
-        clazzs.addAll(collectAllClasses(path, BASE_SEARCH_PACKAGE));
+        // forge版本列表兼容，防止卡加载
+        try {
+            var path = FabricLoader.getInstance().getModContainer("voxy").get().getRootPaths().get(0);
+            clazzs.addAll(collectAllClasses(path, BASE_SEARCH_PACKAGE));
+        } catch (Exception e) {
+            Logger.error("Failed to collect fabricloader", e);
+        }
         clazzs.addAll(collectAllClasses(BASE_SEARCH_PACKAGE));
         int count = 0;
         outer:
@@ -166,6 +171,12 @@ public class Serialization {
         try {
             InputStream stream = Serialization.class.getClassLoader()
                     .getResourceAsStream(pack.replaceAll("[.]", "/"));
+            // Forge compatibility: In Forge/ModLauncher environment, getResourceAsStream may return null
+            // for package directories. This is expected behavior and we should gracefully handle it.
+            if (stream == null) {
+                Logger.info("Cannot scan package " + pack + " via ClassLoader (Forge environment), relying on filesystem scan");
+                return List.of();
+            }
             BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
             return reader.lines().flatMap(inner -> {
                 if (inner.endsWith(".class")) {

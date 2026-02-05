@@ -135,6 +135,6 @@ public class NormalRenderPipeline extends AbstractRenderPipeline {
             this.colourTex.free();
             this.colourSSAOTex.free();
         }
-        super.free0();
+        super.free();
     }
 }

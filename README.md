@@ -8,4 +8,8 @@ Do not redistribute.
 
 这只是为**1.20.1**编译的Voxy版本，配合一些我日常玩的时候发现的整合包内各种奇怪FABRIC移植MOD导致的兼容性问题修复
 
+已有更好的Fork维护和新功能修复版，当前就减缓并预期搁置更新啦~
+
 This is the Voxy version compiled specifically for **1.20.1**, with fixes for compatibility issues caused by various peculiar FABRIC ported mods within certain modpacks.
+
+A better fork maintained version with new features and fixes is available; this version has been shelved.

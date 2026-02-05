@@ -427,21 +427,25 @@ public class VoxyRenderSystem {
         Logger.info("Shutting down rendering");
         try {
             //Cleanup callbacks
-            this.worldIn.setDirtyCallback(null);
-            this.worldIn.getMapper().setBiomeCallback(null);
-            this.worldIn.getMapper().setStateCallback(null);
+            try {
+                this.worldIn.setDirtyCallback(null);
+                this.worldIn.getMapper().setBiomeCallback(null);
+                this.worldIn.getMapper().setStateCallback(null);
+            } catch (Exception e) {Logger.error("Error clearing callbacks", e);}
 
-            this.nodeManager.stop();
+            try {
+                this.nodeManager.stop();
+            } catch (Exception e) {Logger.error("Error stopping node manager", e);}
 
-            this.modelService.shutdown();
-            this.renderGen.shutdown();
-            this.traversal.free();
-            this.nodeCleaner.free();
+            try {this.modelService.shutdown();} catch (Exception e) {Logger.error("Error shutting down model service", e);}
+            try {this.renderGen.shutdown();} catch (Exception e) {Logger.error("Error shutting down render generation", e);}
+            try {this.traversal.free();} catch (Exception e) {Logger.error("Error freeing traversal", e);}
+            try {this.nodeCleaner.free();} catch (Exception e) {Logger.error("Error freeing node cleaner", e);}
 
-            this.geometryData.free();
-            this.chunkBoundRenderer.free();
+            try {this.geometryData.free();} catch (Exception e) {Logger.error("Error freeing geometry data", e);}
+            try {this.chunkBoundRenderer.free();} catch (Exception e) {Logger.error("Error freeing chunk bound renderer", e);}
 
-            this.viewportSelector.free();
+            try {this.viewportSelector.free();} catch (Exception e) {Logger.error("Error freeing viewport selector", e);}
         } catch (Exception e) {Logger.error("Error shutting down renderer components", e);}
         Logger.info("Shutting down render pipeline");
         try {this.pipeline.free();} catch (Exception e){Logger.error("Error releasing render pipeline", e);}
