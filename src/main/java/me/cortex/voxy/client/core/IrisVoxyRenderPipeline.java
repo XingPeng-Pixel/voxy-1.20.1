@@ -86,7 +86,7 @@ public class IrisVoxyRenderPipeline extends AbstractRenderPipeline {
             this.shaderUniforms.free();
         }
 
-        super.free0();
+        super.free();
     }
 
     @Override
