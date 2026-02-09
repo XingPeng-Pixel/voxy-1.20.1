@@ -18,20 +18,45 @@ import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.lighting.LayerLightSectionStorage;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.PriorityBlockingQueue;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class VoxelIngestService {
     private static final ThreadLocal<VoxelizedSection> SECTION_CACHE = ThreadLocal.withInitial(VoxelizedSection::createEmpty);
     private final Service service;
-    private record IngestSection(int cx, int cy, int cz, WorldEngine world, LevelChunkSection section, DataLayer blockLight, DataLayer skyLight){}
-    private final ConcurrentLinkedDeque<IngestSection> ingestQueue = new ConcurrentLinkedDeque<>();
+
+    private record IngestSection(int cx, int cy, int cz, WorldEngine world, LevelChunkSection section, DataLayer blockLight, DataLayer skyLight, double distanceSq) implements Comparable<IngestSection> {
+        @Override
+        public int compareTo(IngestSection other) {
+            return Double.compare(this.distanceSq, other.distanceSq);
+        }
+    }
+
+    private final PriorityBlockingQueue<IngestSection> ingestQueue = new PriorityBlockingQueue<>(1024);
+
+    private final AtomicReference<double[]> cachedPlayerPos = new AtomicReference<>(new double[]{0, 0, 0});
 
     public VoxelIngestService(ServiceManager pool) {
         this.service = pool.createServiceNoCleanup(()->this::processJob, 5000, "Ingest service");
     }
 
+    public void updatePlayerPosition(double x, double y, double z) {
+        cachedPlayerPos.set(new double[]{x, y, z});
+    }
+
+    private double calculateDistanceSq(int cx, int cy, int cz) {
+        double[] pos = cachedPlayerPos.get();
+        double dx = (cx * 16.0 + 8.0) - pos[0];
+        double dy = (cy * 16.0 + 8.0) - pos[1];
+        double dz = (cz * 16.0 + 8.0) - pos[2];
+        return dx*dx + dy*dy + dz*dz;
+    }
+
     private void processJob() {
-        var task = this.ingestQueue.pop();
+        var task = this.ingestQueue.poll();
+        if (task == null) {
+            return; 
+        }
         task.world.markActive();
 
         var section = task.section;
@@ -119,7 +144,8 @@ public class VoxelIngestService {
             for (var section : chunk.getSections()) {
                 i++;
                 if (section == null || !shouldIngestSection(section, chunk.getPos().x, i, chunk.getPos().z)) continue;
-                this.ingestQueue.add(new IngestSection(chunk.getPos().x, i, chunk.getPos().z, engine, section, null, null));
+                double distanceSq = calculateDistanceSq(chunk.getPos().x, i, chunk.getPos().z);
+                this.ingestQueue.add(new IngestSection(chunk.getPos().x, i, chunk.getPos().z, engine, section, null, null, distanceSq));
                 try {
                     this.service.execute();
                 } catch (Exception e) {
@@ -159,7 +185,8 @@ public class VoxelIngestService {
             //    continue;
             //}
 
-            this.ingestQueue.add(new IngestSection(chunk.getPos().x, i, chunk.getPos().z, engine, section, bl, sl));//TODO: fixme, this is technically not safe todo on the chunk load ingest, we need to copy the section data so it cant be modified while being read
+            double distanceSq = calculateDistanceSq(chunk.getPos().x, i, chunk.getPos().z);
+            this.ingestQueue.add(new IngestSection(chunk.getPos().x, i, chunk.getPos().z, engine, section, bl, sl, distanceSq));//TODO: fixme, this is technically not safe todo on the chunk load ingest, we need to copy the section data so it cant be modified while being read
             try {
                 this.service.execute();
             } catch (Exception e) {
@@ -195,7 +222,8 @@ public class VoxelIngestService {
     }
 
     private boolean rawIngest0(WorldEngine engine, LevelChunkSection section, int x, int y, int z, DataLayer bl, DataLayer sl) {
-        this.ingestQueue.add(new IngestSection(x, y, z, engine, section, bl, sl));
+        double distanceSq = calculateDistanceSq(x, y, z);
+        this.ingestQueue.add(new IngestSection(x, y, z, engine, section, bl, sl, distanceSq));
         try {
             this.service.execute();
             return true;

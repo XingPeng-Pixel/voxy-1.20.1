@@ -19,6 +19,9 @@
   "voxy.config.general.subDivisionSize": "细分尺寸像素^2",
   "voxy.config.general.subDivisionSize.tooltip": "屏幕空间AABB的最大像素（平方）尺寸，超过此值将细分至更小的LoD（数值越小质量越高）",
 
+  "voxy.config.general.prioritySubdivision": "优先级智能细分",
+  "voxy.config.general.prioritySubdivision.tooltip": "启用基于优先级的LOD细分系统。优先处理视觉重要度高和近距离部分区块，实现更快加载和更平滑过渡",
+
   "voxy.config.general.renderDistance": "渲染距离",
   "voxy.config.general.renderDistance.tooltip": "Voxy的渲染距离（以区块为单位）",
 

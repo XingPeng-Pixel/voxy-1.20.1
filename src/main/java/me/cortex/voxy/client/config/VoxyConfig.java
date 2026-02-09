@@ -34,6 +34,12 @@ public class VoxyConfig implements OptionStorage<VoxyConfig> {
     public boolean renderStatistics = false;
     public boolean dontUseSodiumBuilderThreads = false;
 
+    public boolean enableWorldCache = true;
+    public int maxCachedWorlds = 3; 
+    public long cacheMaxIdleMinutes = 10; 
+    
+    public boolean enablePrioritySubdivision = true;
+
     private static VoxyConfig loadOrCreate() {
         var path = getConfigPath();
         if (Files.exists(path)) {

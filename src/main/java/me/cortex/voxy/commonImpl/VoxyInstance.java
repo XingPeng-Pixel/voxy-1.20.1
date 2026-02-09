@@ -6,6 +6,7 @@ import me.cortex.voxy.common.thread.ServiceManager;
 import me.cortex.voxy.common.thread.UnifiedServiceThreadPool;
 import me.cortex.voxy.common.util.MemoryBuffer;
 import me.cortex.voxy.common.world.WorldEngine;
+import me.cortex.voxy.common.world.WorldEngineCache;
 import me.cortex.voxy.common.world.service.SectionSavingService;
 import me.cortex.voxy.common.world.service.VoxelIngestService;
 
@@ -31,13 +32,22 @@ public abstract class VoxyInstance {
 
     protected final ImportManager importManager;
 
+//缓存机制
+    protected final WorldEngineCache worldCache;
+
     public VoxyInstance() {
+        this(false, 3, 10); //默认不启用
+    }
+
+    public VoxyInstance(boolean enableCache, int maxCachedWorlds, long cacheMaxIdleMinutes) {
         Logger.info("Initializing voxy instance");
         this.threadPool = new UnifiedServiceThreadPool();
         this.savingService = new SectionSavingService(this.getServiceManager());
         this.ingestService = new VoxelIngestService(this.getServiceManager());
         this.importManager = this.createImportManager();
         this.savingServiceRateLimiter = ()->this.savingService.getTaskCount()<1200;
+        //初始化
+        this.worldCache = new WorldEngineCache(enableCache, maxCachedWorlds, cacheMaxIdleMinutes);
         this.worldCleaner = new Thread(()->{
             try {
                 while (this.isRunning) {
@@ -81,8 +91,23 @@ public abstract class VoxyInstance {
     public VoxelIngestService getIngestService() {
         return this.ingestService;
     }
+    public SectionSavingService getSavingService() {
+        return this.savingService;
+    }
     public ImportManager getImportManager() {
         return this.importManager;
+    }
+    public WorldEngineCache getWorldCache() {
+        return this.worldCache;
+    }
+
+    public java.util.Collection<WorldEngine> getActiveWorlds() {
+        long stamp = this.activeWorldLock.readLock();
+        try {
+            return new ArrayList<>(this.activeWorlds.values());
+        } finally {
+            this.activeWorldLock.unlockRead(stamp);
+        }
     }
 
     //TODO: reference count the world object
@@ -162,9 +187,14 @@ public abstract class VoxyInstance {
         if (this.activeWorlds.containsKey(identifier)) {
             throw new IllegalStateException("Existing world with identifier");
         }
-        Logger.info("Creating new world engine: " + identifier.getLongHash() + "@" + System.identityHashCode(this));
-        var world = new WorldEngine(this.createStorage(identifier), this);
-        world.setSaveCallback(this.savingService::enqueueSave);
+
+        WorldEngine world = this.worldCache.getOrCreate(identifier, () -> {
+            Logger.info("Creating new world engine: " + identifier.getLongHash() + "@" + System.identityHashCode(this));
+            WorldEngine newWorld = new WorldEngine(this.createStorage(identifier), this);
+            newWorld.setSaveCallback(this.savingService::enqueueSave);
+            return newWorld;
+        });
+
         this.activeWorlds.put(identifier, world);
         return world;
     }
@@ -183,15 +213,22 @@ public abstract class VoxyInstance {
         }
 
         if (idleWorlds != null) {
-            //Shutdown and clear all idle worlds
+            //Shutdown and cache/free all idle worlds
             long stamp = this.activeWorldLock.writeLock();
             for (var id : idleWorlds) {
                 var world = this.activeWorlds.remove(id);
                 if (world == null) continue;//Race condition between unlock read and acquire write
                 if (!world.isWorldIdle()) {this.activeWorlds.put(id, world); continue;}//No longer idle
-                Logger.info("Shutting down idle world: " + id.getLongHash());
-                //If is here close and free the world
-                world.free();
+
+                Logger.info("World became idle: " + id.getLongHash());
+
+                //try cache
+                boolean cached = this.worldCache.cache(id, world);
+
+                if (!cached) {
+                    Logger.info("Shutting down idle world (not cached): " + id.getLongHash());
+                    world.free();
+                }
             }
             this.activeWorldLock.unlockWrite(stamp);
         }
@@ -223,6 +260,8 @@ public abstract class VoxyInstance {
         try {this.ingestService.shutdown();} catch (Exception e) {Logger.error(e);}
         try {this.savingService.shutdown();} catch (Exception e) {Logger.error(e);}
 
+        //close cache
+        try {this.worldCache.shutdown();} catch (Exception e) {Logger.error("Error shutting down world cache", e);}
 
         long stamp = this.activeWorldLock.writeLock();
 
