@@ -28,7 +28,13 @@ public class VoxyClientInstance extends VoxyInstance {
     private final Path basePath;
     private final boolean noIngestOverride;
     public VoxyClientInstance() {
-        super();
+        //使用配置初始化
+        super(
+            VoxyConfig.CONFIG.enableWorldCache,
+            VoxyConfig.CONFIG.maxCachedWorlds,
+            VoxyConfig.CONFIG.cacheMaxIdleMinutes
+        );
+
         var path = FlashbackCompat.getReplayStoragePath();
         this.noIngestOverride = path != null;
         if (path == null) {

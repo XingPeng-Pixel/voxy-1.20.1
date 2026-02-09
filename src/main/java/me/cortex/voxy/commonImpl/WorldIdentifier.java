@@ -149,4 +149,9 @@ public class WorldIdentifier {
             throw new RuntimeException(e);
         }
     }
+
+    @Override
+    public String toString() {
+        return getWorldId();
+    }
 }

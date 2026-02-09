@@ -60,6 +60,8 @@ public class VoxyCommands {
         return ClientCommandManager.literal("voxy")//.requires((ctx)-> VoxyCommon.getInstance() != null)
                 .then(ClientCommandManager.literal("reload")
                         .executes(VoxyCommands::reloadInstance))
+                .then(ClientCommandManager.literal("info")
+                        .executes(VoxyCommands::showInfo))
                 .then(imports);
     }
 
@@ -80,6 +82,84 @@ public class VoxyCommands {
 
         var r = Minecraft.getInstance().levelRenderer;
         if (r != null) r.allChanged();
+        return 0;
+    }
+
+    private static int showInfo(CommandContext<FabricClientCommandSource> ctx) {
+        var instance = (VoxyClientInstance)VoxyCommon.getInstance();
+        if (instance == null) {
+            ctx.getSource().sendError(Component.translatable("Voxy must be enabled in settings to use this"));
+            return 1;
+        }
+
+        ctx.getSource().sendFeedback(Component.literal("§6[Voxy] §fGetting Voxy info..."));
+
+        new Thread(() -> {
+            try {
+                StringBuilder info = new StringBuilder();
+                info.append("§6═══════Voxy信息 / Voxy Info═══════§r\n\n");
+
+                long memBufTotalSize = me.cortex.voxy.common.util.MemoryBuffer.getTotalSize();
+                int memBufCount = me.cortex.voxy.common.util.MemoryBuffer.getCount();
+                double memBufMB = memBufTotalSize / (1024.0 * 1024.0);
+
+                Runtime runtime = Runtime.getRuntime();
+                long maxMemory = runtime.maxMemory();
+                long totalMemory = runtime.totalMemory();
+                long freeMemory = runtime.freeMemory();
+                long usedMemory = totalMemory - freeMemory;
+
+                double usedMemoryMB = usedMemory / (1024.0 * 1024.0);
+                double maxMemoryMB = maxMemory / (1024.0 * 1024.0);
+                double voxyMemPercent = (memBufTotalSize * 100.0) / maxMemory;
+
+                info.append(String.format("§e内存占用 / Memory Usage:§r\n"));
+                info.append(String.format("Minecraft: §a%.1f MB§r / §7%.1f MB§r (§c%.1f%%§r)\n",
+                        usedMemoryMB, maxMemoryMB, (usedMemory * 100.0) / maxMemory));
+                info.append(String.format("Voxy: §a%.1f MB§r (§e%.2f%%§r of total)\n",
+                        memBufMB, voxyMemPercent));
+
+                info.append(String.format("\n§eMemory Buffer:§r\n"));
+                info.append(String.format("缓冲区数 / Count: §a%d§r\n", memBufCount));
+                info.append(String.format("总大小 / Total Size: §a%.2f MB§r\n", memBufMB));
+
+                var cacheStats = instance.getWorldCache().getStats();
+                info.append(String.format("\n§e世界缓存 / World Cache:§r\n"));
+                info.append(String.format("状态 / Status: §%s%s§r\n",
+                        cacheStats.currentSize > 0 ? "a" : "7",
+                        cacheStats.currentSize > 0 ? "活跃 / Active":"空闲 / Idle"));
+                info.append(String.format("缓存数 / Cached: §a%d§r / §7%d§r\n",
+                        cacheStats.currentSize, cacheStats.maxSize));
+                info.append(String.format("命中率 / Hit Rate: §a%.1f%%§r\n", cacheStats.hitRate));
+                info.append(String.format("命中/未中 / Hits/Misses: §a%d§r / §c%d§r\n",
+                        cacheStats.hits, cacheStats.misses));
+                info.append(String.format("丢掉次数 / Drop: §e%d§r\n", cacheStats.evictions));
+
+                info.append(String.format("\n§e任务队列 / Task Queues:§r\n"));
+                info.append(String.format("摄取 / Ingest: §a%d§r\n", instance.getIngestService().getTaskCount()));
+                info.append(String.format("保存 / Saving: §a%d§r\n", instance.getSavingService().getTaskCount()));
+
+                //活跃区块数
+                var activeWorlds = instance.getActiveWorlds();
+                if (!activeWorlds.isEmpty()) {
+                    info.append(String.format("\n§e活跃世界 / Active Worlds:§r\n"));
+                    for (var world : activeWorlds) {
+                        int sectionCount = world.getActiveSectionCount();
+                        info.append(String.format("  区块数 / Sections: §a%d§r\n", sectionCount));
+                    }
+                }
+
+                info.append("\n§6═══════════════════════════════════§r");
+
+                Minecraft.getInstance().execute(() -> {
+                    ctx.getSource().sendFeedback(Component.literal(info.toString()));
+                });
+
+            } catch (Exception e) {
+                ctx.getSource().sendError(Component.literal("§c获取信息失败: " + e.getMessage()));
+            }
+        }, "Voxy-Info-Collector").start();
+
         return 0;
     }
 

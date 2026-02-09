@@ -19,6 +19,9 @@
   "voxy.config.general.subDivisionSize": "Pixels^2 of subdivision size",
   "voxy.config.general.subDivisionSize.tooltip": "Maximum size in pixels (squared) of screenspace AABB before subdiving to smaller LoDs (Smaller being higher quality)",
 
+  "voxy.config.general.prioritySubdivision": "Priority-Based Subdivision",
+  "voxy.config.general.prioritySubdivision.tooltip": "Enable intelligent LOD subdivision system. Prioritizes nearby and visually important areas for faster loading and smoother transitions",
+
   "voxy.config.general.renderDistance": "Render distance",
   "voxy.config.general.renderDistance.tooltip": "Render distance of voxy in chunks",
 

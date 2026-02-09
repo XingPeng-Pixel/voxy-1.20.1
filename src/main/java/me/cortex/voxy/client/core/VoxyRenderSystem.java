@@ -214,6 +214,13 @@ public class VoxyRenderSystem {
             return;
         }
 
+        if (this.worldIn.instanceIn != null) {
+            var ingestService = this.worldIn.instanceIn.getIngestService();
+            if (ingestService != null) {
+                ingestService.updatePlayerPosition(viewport.cameraX, viewport.cameraY, viewport.cameraZ);
+            }
+        }
+
         TimingStatistics.resetSamplers();
 
         long startTime = System.nanoTime();
